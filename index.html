@@ -657,14 +657,14 @@
         }
 
         async function loginWithGoogle() {
-            if (!supabaseClient) return alert('No hay conexión con Supabase. Usa modo invitado.');
-            try {
-                await supabaseClient.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo: window.location.origin }
-                });
-            } catch (err) { alert(err.message); }
-        }
+    if (!supabaseClient) return alert('No hay conexión con Supabase. Usa modo invitado.');
+    try {
+        await supabaseClient.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.href }
+        });
+    } catch (err) { alert(err.message); }
+}
 
         function loginAsGuest() {
             currentUserId = 'invitado';
