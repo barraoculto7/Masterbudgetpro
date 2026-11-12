@@ -1,0 +1,190 @@
+:root {
+    --bg-canvas: #f8f7f4;
+    --card-bg: #ffffff;
+    --text-main: #1f2328;
+    --text-muted: #8c929c;
+    --accent-green: #198754;
+    --accent-red: #dc3545;
+}
+
+body {
+    background-color: var(--bg-canvas);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* === MODO OSCURO (DARK THEME) === */
+body.dark-theme {
+    --bg-canvas: #121212;
+    --card-bg: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-muted: #a0a0a0;
+}
+
+body.dark-theme .sidebar-nav,
+body.dark-theme .dashboard-card,
+body.dark-theme .modal-content {
+    background-color: var(--card-bg);
+    border-color: #2c2c2c;
+    color: var(--text-main);
+}
+
+body.dark-theme .sidebar-icon {
+    color: var(--text-muted);
+}
+
+body.dark-theme .sidebar-icon:hover,
+body.dark-theme .sidebar-icon.active {
+    background-color: #2a2a2a;
+    color: #ffffff;
+}
+
+body.dark-theme .tx-item {
+    border-bottom-color: #2a2a2a;
+}
+
+body.dark-theme .form-control,
+body.dark-theme .form-select {
+    background-color: #2b2b2b;
+    border-color: #3d3d3d;
+    color: #ffffff;
+}
+
+body.dark-theme .btn-white {
+    background-color: #1e1e1e;
+    border-color: #2c2c2c;
+    color: #ffffff !important;
+}
+
+body.dark-theme .dropdown-menu {
+    background-color: #1e1e1e;
+    border-color: #2c2c2c;
+}
+
+body.dark-theme .dropdown-item {
+    color: #e0e0e0;
+}
+
+body.dark-theme .dropdown-item:hover {
+    background-color: #2a2a2a;
+}
+
+/* Sidebar icónico con texto abajo */
+.sidebar-nav {
+    width: 85px; /* Ampliado para acomodar texto cómodamente */
+    background-color: var(--card-bg);
+    border-right: 1px solid #eaeaea;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 1.2rem;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.sidebar-icon {
+    width: 70px;
+    height: auto;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column; /* Alinea icono arriba y texto abajo */
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+    padding: 6px 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+}
+
+.sidebar-icon span {
+    font-size: 0.68rem;
+    font-weight: 600;
+    margin-top: 3px;
+    line-height: 1.1;
+    display: block;
+    word-break: break-word;
+}
+
+.sidebar-icon:hover, 
+.sidebar-icon.active {
+    background-color: #f0f0f0;
+    color: var(--text-main);
+}
+
+.main-wrapper {
+    margin-left: 85px; /* Ajustado al nuevo ancho del sidebar */
+    padding: 2rem;
+}
+
+/* Soporte para modo oscuro */
+body.dark-theme .sidebar-icon span {
+    color: var(--text-muted);
+}
+body.dark-theme .sidebar-icon:hover span,
+body.dark-theme .sidebar-icon.active span {
+    color: #ffffff;
+}
+
+/* Tarjetas de Métricas */
+.dashboard-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    height: 100%;
+}
+
+.metric-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.metric-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.metric-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+/* Colores de Saldos */
+.val-negative { color: var(--accent-red); }
+.val-positive { color: var(--accent-green); }
+
+/* Lista de Transacciones */
+.tx-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+.tx-item:last-child { border-bottom: none; }
+
+.tx-title { 
+    font-weight: 700; 
+    font-size: 0.9rem; 
+    margin-bottom: 2px; 
+}
+.tx-date { 
+    font-size: 0.75rem; 
+    color: var(--text-muted); 
+}

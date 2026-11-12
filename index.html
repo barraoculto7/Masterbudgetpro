@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MasterBudget Pro - Dashboard</title>
+    <!-- Bootstrap CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Archivo CSS Personalizado -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Librerías para Exportar a Excel y PDF sin fallos de CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- PDF.js de Mozilla para leer Estados de Cuenta BI en PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+<body>
+
+    <!-- OVERLAY DE CARGA Y PROCESAMIENTO -->
+    <div id="loading-overlay" class="d-none" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.65); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div class="card p-4 rounded-4 shadow-lg text-center border-0" style="max-width: 380px; background: var(--card-bg, #ffffff);">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <h5 class="fw-bold mb-2" id="loading-title">Procesando Estado de Cuenta...</h5>
+            <p class="text-muted small mb-0" id="loading-subtitle">Extrayendo transacciones del PDF. Por favor, no cierres la ventana.</p>
+        </div>
+    </div>
+
+    <!-- Alerta de Emergencia por Déficit -->
+    <div id="emergency-screen" class="d-none">
+        <div class="emergency-content text-center text-white p-5 bg-danger" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;">
+            <h1 class="display-1">⚠️ ¡ALERTA FINANCIERA!</h1>
+            <h2>Tus gastos superan tus ingresos este mes</h2>
+            <p>Ya no cuentas con recursos libres. Ajusta tus categorías o revisa tus objetivos.</p>
+            <button class="btn btn-light mt-4 fw-bold" onclick="closeEmergency()">Entendido, revisaré mis finanzas</button>
+        </div>
+    </div>
+
+    <!-- SIDEBAR DE NAVEGACIÓN CON NOMBRES DEBAJO -->
+    <aside id="app-sidebar" class="sidebar-nav d-none">
+        <div class="mb-3 text-primary fs-3"><i class="bi bi-wallet2"></i></div>
+        
+        <a class="sidebar-icon active" onclick="showSection('dashboard-section')" title="Dashboard">
+            <i class="bi bi-grid-fill"></i>
+            <span>Dashboard</span>
+        </a>
+        <a class="sidebar-icon" onclick="showSection('daily-tx-section'); loadDailyTransactions();" title="Diario">
+            <i class="bi bi-receipt-cutoff"></i>
+            <span>Diario</span>
+        </a>
+        <a class="sidebar-icon" onclick="showSection('bank-import-section')" title="Importar">
+            <i class="bi bi-file-earmark-arrow-up"></i>
+            <span>Importar</span>
+        </a>
+        <a class="sidebar-icon" onclick="showSection('categories-section')" title="Límites">
+            <i class="bi bi-tags-fill"></i>
+            <span>Límites</span>
+        </a>
+        <a class="sidebar-icon" onclick="showSection('emergency-fund-section')" title="Fondo">
+            <i class="bi bi-shield-lock-fill"></i>
+            <span>Fondo</span>
+        </a>
+        <a class="sidebar-icon" onclick="showSection('goals-section')" title="Objetivos">
+            <i class="bi bi-trophy"></i>
+            <span>Objetivos</span>
+        </a>
+        <a class="sidebar-icon" onclick="showSection('history-section'); loadHistoryTable();" title="Histórico">
+            <i class="bi bi-journal-text"></i>
+            <span>Histórico</span>
+        </a>
+        
+        <a class="sidebar-icon mt-auto mb-3" data-bs-toggle="modal" data-bs-target="#settingsModal" title="Ajustes">
+            <i class="bi bi-gear"></i>
+            <span>Ajustes</span>
+        </a>
+    </aside>
+
+    <div class="main-wrapper">
+        
+        <!-- TOPBAR DE USUARIO Y SELECTOR DE MES -->
+        <header id="top-navbar" class="d-flex justify-content-between align-items-center mb-4 d-none">
+            <div class="d-flex align-items-center gap-3">
+                <h4 class="fw-bold mb-0">MasterBudget Pro</h4>
+                <div class="d-flex align-items-center gap-2 bg-white px-3 py-1 rounded-pill border shadow-sm ms-3">
+                    <i class="bi bi-calendar3 text-muted"></i>
+                    <input type="month" id="selected-month" class="form-control form-control-sm border-0 bg-transparent fw-semibold" style="width: 145px;" onchange="onPeriodChange()">
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <button id="theme-toggle-btn" class="btn btn-white border rounded-circle p-2 shadow-sm d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" onclick="toggleThemeMode()">
+                    <i id="theme-icon" class="bi bi-moon-fill fs-5 text-dark"></i>
+                </button>
+
+                <div class="dropdown">
+                    <button class="btn btn-white border rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                        <img id="user-avatar" src="" class="rounded-circle d-none" width="28" height="28">
+                        <span id="user-greeting" class="fw-semibold text-dark fs-6">Cargando...</span>
+                        <i class="bi bi-chevron-down small text-muted"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 mt-2">
+                        <li><h6 class="dropdown-header" id="user-email">email@ejemplo.com</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#settingsModal"><i class="bi bi-gear me-2"></i> Configuración</button></li>
+                        <li><button class="dropdown-item text-danger" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión</button></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- SECCIÓN 1: LOGIN -->
+        <section id="login-section" class="dashboard-card mx-auto mt-5" style="max-width: 400px;">
+            <h3 class="text-center mb-4 fw-bold">Iniciar Sesión</h3>
+            <button type="button" class="btn btn-outline-dark w-100 mb-2 py-2 fw-medium" onclick="loginWithGoogle()"><i class="bi bi-google me-2"></i>Continuar con Google</button>
+            <button type="button" class="btn btn-light border w-100 mb-3 py-2 fw-medium" onclick="loginAsGuest()"><i class="bi bi-person me-2"></i>Continuar como Invitado</button>
+            <hr class="my-4">
+            <form id="login-form">
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Correo Electrónico</label>
+                    <input type="email" id="login-email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Contraseña</label>
+                    <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Ingresar / Registrarse</button>
+            </form>
+        </section>
+
+        <!-- SECCIÓN PRINCIPAL: DASHBOARD -->
+        <section id="dashboard-section" class="d-none">
+            <!-- ACCIONES RÁPIDAS -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-dark rounded-pill px-4" onclick="showSection('daily-tx-section')"><i class="bi bi-plus-circle me-2"></i>Nueva Transacción</button>
+                    <button class="btn btn-outline-primary rounded-pill px-4" onclick="showSection('bank-import-section')"><i class="bi bi-upload me-2"></i>Importar Estado de Cuenta BI</button>
+                    <button class="btn btn-outline-success rounded-pill px-4" onclick="showSection('goals-section')"><i class="bi bi-flag me-2"></i>Objetivos</button>
+                    <button class="btn btn-outline-warning text-dark rounded-pill px-4" onclick="showSection('categories-section')"><i class="bi bi-tags me-2"></i>Límites</button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary rounded-pill px-3" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel text-success me-1"></i> Excel</button>
+                    <button class="btn btn-outline-secondary rounded-pill px-3" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf text-danger me-1"></i> PDF</button>
+                </div>
+            </div>
+
+            <!-- MÉTRICAS PRINCIPALES -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="dashboard-card">
+                        <div class="metric-title">Saldo Libre Disponible</div>
+                        <div class="metric-sub">Descontando gastos y débitos</div>
+                        <div class="metric-value" id="dash-balance">Q 0,00</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dashboard-card">
+                        <div class="metric-title">Gastos Fijos y Diarios</div>
+                        <div class="metric-sub">Total acumulado del mes</div>
+                        <div class="metric-value val-negative" id="dash-expenses">-Q 0,00</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="dashboard-card">
+                        <div class="metric-title">Ingresos Totales</div>
+                        <div class="metric-sub">Base más ingresos extras</div>
+                        <div class="metric-value val-positive" id="dash-income">Q 0,00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA 2: LÍMITES POR CATEGORÍA Y TRANSACCIONES -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="dashboard-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2 text-warning"></i>Límites de Presupuesto</h6>
+                            <button class="btn btn-sm btn-link p-0 text-decoration-none" onclick="showSection('categories-section')">Editar Límites</button>
+                        </div>
+                        <div id="category-limits-container">
+                            <span class="text-muted small">Cargando categorías...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="dashboard-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Últimas Transacciones Registradas</h6>
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="showSection('daily-tx-section'); loadDailyTransactions();" id="view-all-tx-btn">
+                                Ver todas <i class="bi bi-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                        <div id="recent-transactions-list">
+                            <span class="text-muted small">Cargando movimientos...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA 3: GRÁFICAS -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="dashboard-card">
+                        <h6 class="fw-bold mb-1">Evolución Diaria de Gastos</h6>
+                        <div class="small text-muted mb-3">Totales acumulados por semana</div>
+                        <canvas id="barChart" height="200"></canvas>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="dashboard-card">
+                        <h6 class="fw-bold mb-1">Distribución Por Categoría</h6>
+                        <div class="small text-muted mb-3">Proporción del mes</div>
+                        <canvas id="donutChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: LIBRO DIARIO DE TRANSACCIONES -->
+        <section id="daily-tx-section" class="d-none">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h4 class="fw-bold mb-0"><i class="bi bi-receipt-cutoff me-2 text-primary"></i>Libro Diario de Movimientos</h4>
+                        <p class="text-muted small mb-0">Consulta, filtra o edita el 100% de tus créditos y débitos importados o manuales</p>
+                    </div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTxModal"><i class="bi bi-plus-lg me-1"></i>Agregar Movimiento</button>
+                </div>
+
+                <!-- CONTROLES DE FILTRO Y BÚSQUEDA -->
+                <div class="row g-2 mb-4 bg-light p-3 rounded-3 border">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="search-tx-input" class="form-control border-start-0" placeholder="Buscar por descripción o concepto..." oninput="filterDailyTransactions()">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="filter-tx-type" class="form-select" onchange="filterDailyTransactions()">
+                            <option value="all">Todos los Movimientos</option>
+                            <option value="expense">Solo Débitos (Gastos)</option>
+                            <option value="income">Solo Créditos (Ingresos)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <span class="badge bg-secondary p-2 fs-6 fw-normal" id="tx-count-badge">0 Movimientos</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Categoría</th>
+                                <th>Descripción / Documento</th>
+                                <th>Monto</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-tx-table-body">
+                            <tr><td colspan="6" class="text-center text-muted">Cargando transacciones...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: IMPORTADOR BANCO BI (PDF / CSV) Y SMS -->
+        <section id="bank-import-section" class="d-none">
+            <div class="row g-4">
+                <!-- IMPORTAR PDF DE BANCO INDUSTRIAL -->
+                <div class="col-md-6">
+                    <div class="dashboard-card">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>Importar Estado de Cuenta BI (PDF)</h5>
+                        <p class="small text-muted mb-3">Sube directamente el estado de cuenta oficial descargado en formato PDF de <strong>BI en Línea</strong>.</p>
+                        
+                        <div class="mb-3">
+                            <input type="file" id="bank-file-input" class="form-control" accept=".pdf, .csv, .xlsx, .xls">
+                        </div>
+                        <button class="btn btn-danger w-100 fw-semibold" onclick="processBankFile()"><i class="bi bi-upload me-2"></i>Importar PDF de BI</button>
+                    </div>
+                </div>
+
+                <!-- PARSER DE SMS O NOTIFICACIÓN BI -->
+                <div class="col-md-6">
+                    <div class="dashboard-card">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-chat-text text-primary me-2"></i>Pegar Notificación SMS / Correo</h5>
+                        <p class="small text-muted mb-3">Pega el texto que te envía el banco al realizar un movimiento (Ej: <em>"BiMovil: Debito por Q.500.00 Cuenta MONE..."</em>).</p>
+                        
+                        <div class="mb-3">
+                            <textarea id="sms-text-input" class="form-control" rows="4" placeholder="Pega aquí el mensaje de BiMovil..."></textarea>
+                        </div>
+                        <button class="btn btn-primary w-100 fw-semibold" onclick="parseSmsNotification()"><i class="bi bi-magic me-2"></i>Parsear y Registrar Transacción</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: CATEGORÍAS PERSONALIZADAS Y LÍMITES -->
+        <section id="categories-section" class="d-none">
+            <div class="dashboard-card mx-auto" style="max-width: 650px;">
+                <h4 class="fw-bold mb-3"><i class="bi bi-tags-fill me-2 text-warning"></i>Categorías Personalizadas y Presupuestos</h4>
+                <p class="text-muted small mb-4">Define límites mensuales por categoría para recibir alertas cuando te acerques al máximo configurado.</p>
+
+                <div class="input-group mb-4">
+                    <input type="text" id="new-cat-name" class="form-control" placeholder="Nombre de categoría (ej: Gimnasio, Mascotas)">
+                    <input type="number" id="new-cat-limit" class="form-control" placeholder="Límite máximo Q">
+                    <button class="btn btn-warning fw-semibold" onclick="addCustomCategory()"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+                </div>
+
+                <h6 class="fw-bold mb-3">Tus Categorías Configuradas</h6>
+                <div id="categories-manage-list">
+                    <span class="text-muted small">Cargando categorías...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: FONDO DE EMERGENCIA DINÁMICO -->
+        <section id="emergency-fund-section" class="d-none">
+            <div class="dashboard-card mx-auto" style="max-width: 700px;">
+                <h4 class="fw-bold mb-3"><i class="bi bi-shield-check me-2 text-success"></i>Fondo de Emergencia Dinámico</h4>
+                <p class="text-muted small mb-4">Calcula la cantidad de meses que puedes cubrir sin ingresos, en función de tus gastos fijos reales.</p>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 text-center">
+                            <span class="small text-muted d-block">Gasto Mensual Promedio</span>
+                            <h3 class="fw-bold text-danger mb-0" id="avg-monthly-expense">Q 0.00</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 text-center">
+                            <span class="small text-muted d-block">Monto Actual de Ahorro</span>
+                            <h3 class="fw-bold text-success mb-0" id="current-savings-fund">Q 0.00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center p-4 rounded-4 border bg-white shadow-sm mb-4">
+                    <h5 class="text-muted mb-2">Respaldo Financiero Calculado:</h5>
+                    <h1 class="display-4 fw-bold text-primary mb-1" id="freedom-months">0.0 Meses</h1>
+                    <p class="small text-muted mb-0" id="freedom-status-text">Analizando datos...</p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Ajustar Saldo de Fondo de Emergencia:</label>
+                    <div class="input-group">
+                        <span class="input-group-text">Q</span>
+                        <input type="number" id="update-emergency-input" class="form-control" placeholder="Monto total asignado a emergencias">
+                        <button class="btn btn-primary" onclick="updateEmergencySavings()">Actualizar Fondo</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: OBJETIVOS -->
+        <section id="goals-section" class="d-none dashboard-card mx-auto mt-4" style="max-width: 500px;">
+            <h4 class="fw-bold mb-3">Nuevo Objetivo</h4>
+            <div class="mb-3">
+                <label class="form-label">Nombre del Objetivo:</label>
+                <input type="text" id="goal-name-input" class="form-control" placeholder="Ej: Viaje, Carro, Estudios">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Monto Total Meta (Q):</label>
+                <input type="number" id="goal-target-amount" class="form-control" placeholder="Ej: 12000" oninput="calculateMonthlyDebit()">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Plazo en Meses:</label>
+                <input type="number" id="goal-target-months" class="form-control" value="12" min="1" oninput="calculateMonthlyDebit()">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Cuota Mensual Automática:</label>
+                <input type="number" id="goal-monthly-debit" class="form-control bg-light" readonly>
+            </div>
+
+            <button class="btn btn-success w-100 mb-2" onclick="saveGoal()">Guardar Objetivo</button>
+            <button class="btn btn-light border w-100" onclick="showSection('dashboard-section')">Volver al Dashboard</button>
+        </section>
+
+        <!-- SECCIÓN: HISTÓRICO -->
+        <section id="history-section" class="d-none">
+            <div class="dashboard-card">
+                <h4 class="fw-bold mb-3"><i class="bi bi-journal-text me-2 text-primary"></i>Histórico Presupuestario</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mes / Año</th>
+                                <th>Ingresos</th>
+                                <th>Gastos</th>
+                                <th>Ahorros / Débitos</th>
+                                <th>Saldo Disponible</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <tr><td colspan="6" class="text-center text-muted">Cargando historial...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- MODAL NUEVO MOVIMIENTO DIARIO -->
+    <div class="modal fade" id="newTxModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-4 border-0">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">➕ Registrar Transacción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tipo</label>
+                        <select id="tx-type" class="form-select" onchange="updateCategoryDropdown()">
+                            <option value="expense">Gasto (-)</option>
+                            <option value="income">Ingreso (+)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Categoría</label>
+                        <select id="tx-category" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Monto (Q)</label>
+                        <input type="number" id="tx-amount" class="form-control" placeholder="0.00" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha</label>
+                        <input type="date" id="tx-date" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Descripción / Nota</label>
+                        <input type="text" id="tx-desc" class="form-control" placeholder="Ej: Pago de Luz, Supermercado">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDailyTransaction()">Guardar Transacción</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURACIÓN CUENTA -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-4 border-0">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-gear-fill me-2"></i>Configuración</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Divisa</label>
+                        <select id="currency-select" class="form-select" onchange="changeCurrency(this.value)">
+                            <option value="Q">Quetzales (Q)</option>
+                            <option value="€">Euros (€)</option>
+                            <option value="$">Dólares ($)</option>
+                        </select>
+                    </div>
+                    <hr class="my-4">
+                    <div class="border border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-3 p-3">
+                        <h6 class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Zona de Peligro</h6>
+                        <p class="small text-muted mb-3">Esta acción eliminará todos los registros permanentemente.</p>
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-semibold" onclick="openResetConfirmation()">Resetear todos mis datos</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMACIÓN RESET -->
+    <div class="modal fade" id="confirmResetModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header bg-danger text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <h5 class="fw-bold text-danger mb-3">¿Esta seguro de eliminar la data?</h5>
+                    <p class="text-muted mb-0">No se podrá restaurar una vez confirmado.</p>
+                </div>
+                <div class="modal-footer justify-content-center gap-2 pb-4 border-0">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="executeResetData()">Sí, eliminar todo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- CÓDIGO JAVASCRIPT MASTERBUDGET PRO -->
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+
+        let supabaseClient = null;
+        if (window.supabase) {
+            const supabaseUrl = 'https://aiufiecbzrupeodtupur.supabase.co';
+            const supabaseKey = 'sb_publishable_KdfNLyZZM8jr92pLWsxePg_XNn4ZMca';
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        }
+
+        let currentUserId = null;
+        let barChartInstance = null;
+        let donutChartInstance = null;
+        let currentCurrency = 'Q';
+        let selectedPeriod = new Date().toISOString().slice(0, 7);
+
+        let defaultCategories = [
+            { name: "Comida / Supermercado", limit: 2000 },
+            { name: "Alquiler / Casa", limit: 3000 },
+            { name: "Luz / Servicios", limit: 500 },
+            { name: "Salud / Farmacia", limit: 500 },
+            { name: "Transporte", limit: 800 },
+            { name: "Compras / Entretenimiento", limit: 1000 },
+            { name: "Transferencias / Pagos", limit: 1500 }
+        ];
+
+        let customCategories = [];
+        let dailyTransactions = [];
+        let goalsList = [];
+        let totalSavingsFund = 0;
+
+        function formatMoney(amount) {
+            return (parseFloat(amount) || 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function showLoading(title, subtitle) {
+            const overlay = document.getElementById('loading-overlay');
+            if (title) document.getElementById('loading-title').innerText = title;
+            if (subtitle) document.getElementById('loading-subtitle').innerText = subtitle;
+            overlay.classList.remove('d-none');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('d-none');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('selected-month').value = selectedPeriod;
+            document.getElementById('tx-date').valueAsDate = new Date();
+
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                const themeIcon = document.getElementById('theme-icon');
+                if (themeIcon) {
+                    themeIcon.classList.remove('bi-moon-fill', 'text-dark');
+                    themeIcon.classList.add('bi-sun-fill', 'text-warning');
+                }
+            }
+
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    if (!supabaseClient) return alert('La conexión con Supabase falló.');
+                    const email = document.getElementById('login-email').value;
+                    const password = document.getElementById('login-password').value;
+
+                    try {
+                        let { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                        if (error) {
+                            let signUp = await supabaseClient.auth.signUp({ email, password });
+                            if (signUp.error) alert('Error: ' + signUp.error.message);
+                            else alert('Usuario registrado exitosamente.');
+                        }
+                    } catch (err) { alert('Error: ' + err.message); }
+                });
+            }
+        });
+
+        function toggleThemeMode() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            body.classList.toggle('dark-theme');
+            
+            if (body.classList.contains('dark-theme')) {
+                themeIcon.classList.remove('bi-moon-fill', 'text-dark');
+                themeIcon.classList.add('bi-sun-fill', 'text-warning');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                themeIcon.classList.remove('bi-sun-fill', 'text-warning');
+                themeIcon.classList.add('bi-moon-fill', 'text-dark');
+                localStorage.setItem('theme', 'light');
+            }
+            renderCharts();
+        }
+
+        if (supabaseClient) {
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    currentUserId = session.user.id;
+                    renderUserProfile(session.user);
+                    toggleAppLayout(true);
+                    showSection('dashboard-section');
+                    loadAllAppData();
+                }
+            });
+        }
+
+        function renderUserProfile(user) {
+            const avatarImg = document.getElementById('user-avatar');
+            const greetingEl = document.getElementById('user-greeting');
+            const emailEl = document.getElementById('user-email');
+
+            if (user === 'invitado') {
+                greetingEl.innerText = "Modo Invitado";
+                emailEl.innerText = "Sesión temporal de prueba";
+                avatarImg.classList.add('d-none');
+            } else if (user) {
+                const userMeta = user.user_metadata || {};
+                const fullName = userMeta.full_name || userMeta.name || 'Usuario';
+                const avatarUrl = userMeta.avatar_url || userMeta.picture;
+
+                greetingEl.innerText = fullName;
+                emailEl.innerText = user.email || '';
+
+                if (avatarUrl) {
+                    avatarImg.src = avatarUrl;
+                    avatarImg.classList.remove('d-none');
+                }
+            }
+        }
+
+        function toggleAppLayout(show) {
+            if (show) {
+                document.getElementById('top-navbar').classList.remove('d-none');
+                document.getElementById('app-sidebar').classList.remove('d-none');
+            } else {
+                document.getElementById('top-navbar').classList.add('d-none');
+                document.getElementById('app-sidebar').classList.add('d-none');
+            }
+        }
+
+        async function loginWithGoogle() {
+            if (!supabaseClient) return alert('No hay conexión con Supabase. Usa modo invitado.');
+            try {
+                await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.origin }
+                });
+            } catch (err) { alert(err.message); }
+        }
+
+        function loginAsGuest() {
+            currentUserId = 'invitado';
+            renderUserProfile('invitado');
+            toggleAppLayout(true);
+            showSection('dashboard-section');
+            loadAllAppData();
+        }
+
+        async function logout() {
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            currentUserId = null;
+            toggleAppLayout(false);
+            showSection('login-section');
+        }
+
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('section');
+            sections.forEach(sec => sec.classList.add('d-none'));
+            document.getElementById(sectionId).classList.remove('d-none');
+
+            if (sectionId === 'daily-tx-section') {
+                loadDailyTransactions();
+            }
+        }
+
+        function onPeriodChange() {
+            selectedPeriod = document.getElementById('selected-month').value;
+            loadAllAppData();
+        }
+
+        function changeCurrency(symbol) {
+            currentCurrency = symbol;
+            updateDashboardMetrics();
+        }
+
+        function exportToPDF() {
+            if (!window.jspdf) return alert("Cargando motor PDF, intenta de nuevo.");
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFillColor(31, 35, 40);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.setTextColor(255, 255, 255);
+            doc.text("MasterBudget Pro - Reporte Financiero", 14, 20);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Periodo: ${selectedPeriod}`, 155, 20);
+
+            let totalInc = 0, totalExp = 0;
+            dailyTransactions.forEach(t => {
+                if (t.type === 'income') totalInc += parseFloat(t.amount);
+                else totalExp += parseFloat(t.amount);
+            });
+
+            const goalsDebit = goalsList.reduce((acc, g) => acc + (parseFloat(g.monthly_debit) || 0), 0);
+            const freeBalance = totalInc - totalExp - goalsDebit;
+
+            let y = 45;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("Resumen General", 14, y);
+
+            y += 8;
+            const summaryRows = [
+                ["Ingresos y Saldo Inicial", `${currentCurrency} ${formatMoney(totalInc)}`],
+                ["Gastos Totales", `-${currentCurrency} ${formatMoney(totalExp)}`],
+                ["Apartado de Objetivos", `-${currentCurrency} ${formatMoney(goalsDebit)}`],
+                ["Saldo Libre Disponible", `${currentCurrency} ${formatMoney(freeBalance)}`]
+            ];
+
+            doc.setFontSize(11);
+            summaryRows.forEach(([label, val], idx) => {
+                doc.setFillColor(idx % 2 === 0 ? 245 : 255, 245, 245);
+                doc.rect(14, y - 6, 182, 9, 'F');
+                doc.setFont("helvetica", idx === 3 ? "bold" : "normal");
+                doc.text(label, 18, y);
+                doc.text(val, 180, y, { align: 'right' });
+                y += 10;
+            });
+
+            y += 10;
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("Últimas Transacciones del Mes", 14, y);
+
+            y += 8;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "bold");
+            doc.text("Fecha", 18, y);
+            doc.text("Categoría", 55, y);
+            doc.text("Descripción", 105, y);
+            doc.text("Monto", 180, y, { align: 'right' });
+            y += 5;
+
+            doc.setFont("helvetica", "normal");
+            dailyTransactions.slice(0, 15).forEach((t, i) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setFillColor(i % 2 === 0 ? 250 : 255, 250, 250);
+                doc.rect(14, y - 5, 182, 8, 'F');
+                doc.text(t.date || '', 18, y);
+                doc.text((t.category || '').slice(0, 20), 55, y);
+                doc.text((t.description || '').slice(0, 30), 105, y);
+                doc.text(`${t.type === 'income' ? '+' : '-'}${currentCurrency} ${formatMoney(t.amount)}`, 180, y, { align: 'right' });
+                y += 8;
+            });
+
+            doc.save(`MasterBudget_${selectedPeriod}.pdf`);
+        }
+
+        function exportToExcel() {
+            const exportData = [
+                ["MasterBudget Pro - Reporte Financiero"],
+                ["Periodo:", selectedPeriod],
+                [],
+                ["Fecha", "Tipo", "Categoría", "Descripción", "Monto (" + currentCurrency + ")"]
+            ];
+
+            dailyTransactions.forEach(t => {
+                exportData.push([t.date, t.type === 'income' ? 'Ingreso' : 'Gasto', t.category, t.description, t.amount]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Transacciones");
+            XLSX.writeFile(wb, `MasterBudget_${selectedPeriod}.xlsx`);
+        }
+
+        async function loadAllAppData() {
+            updateCategoryDropdown();
+
+            if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                const { data: cats } = await supabaseClient.from('custom_categories').select('*').eq('user_id', currentUserId);
+                if (cats && cats.length > 0) customCategories = cats;
+                else customCategories = defaultCategories;
+
+                const { data: txs } = await supabaseClient.from('daily_transactions').select('*').eq('user_id', currentUserId).order('date', { ascending: false });
+                if (txs) dailyTransactions = txs.filter(t => t.date && t.date.startsWith(selectedPeriod));
+
+                const { data: gol } = await supabaseClient.from('goals').select('*').eq('user_id', currentUserId);
+                if (gol) goalsList = gol;
+            }
+
+            updateDashboardMetrics();
+            renderCategoryLimits();
+            renderRecentTransactions();
+            calculateEmergencyFund();
+        }
+
+        function updateCategoryDropdown() {
+            const type = document.getElementById('tx-type').value;
+            const catSelect = document.getElementById('tx-category');
+            
+            if (type === 'income') {
+                catSelect.innerHTML = '<option value="Salario">Salario Base</option><option value="Extra">Ingreso Extra</option><option value="Saldo Inicial BI">Saldo Inicial BI</option>';
+            } else {
+                const allCats = customCategories.length > 0 ? customCategories : defaultCategories;
+                catSelect.innerHTML = allCats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            }
+        }
+
+        async function saveDailyTransaction() {
+            const type = document.getElementById('tx-type').value;
+            const category = document.getElementById('tx-category').value;
+            const amount = parseFloat(document.getElementById('tx-amount').value) || 0;
+            const date = document.getElementById('tx-date').value || new Date().toISOString().slice(0, 10);
+            const description = document.getElementById('tx-desc').value;
+
+            if (amount <= 0) return alert('Ingresa un monto válido.');
+
+            const newTx = { type, category, amount, date, description };
+
+            if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                await supabaseClient.from('daily_transactions').insert([{ user_id: currentUserId, ...newTx }]);
+            } else {
+                dailyTransactions.unshift(newTx);
+            }
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newTxModal'));
+            if (modal) modal.hide();
+
+            loadAllAppData();
+        }
+
+        function renderCategoryLimits() {
+            const container = document.getElementById('category-limits-container');
+            const allCats = customCategories.length > 0 ? customCategories : defaultCategories;
+
+            container.innerHTML = allCats.map(cat => {
+                const spent = dailyTransactions
+                    .filter(t => t.type === 'expense' && t.category === cat.name)
+                    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                const limit = parseFloat(cat.budget_limit || cat.limit) || 1;
+                const pct = Math.min(100, Math.round((spent / limit) * 100));
+
+                let barColor = 'bg-success';
+                if (pct >= 100) barColor = 'bg-danger';
+                else if (pct >= 80) barColor = 'bg-warning text-dark';
+
+                return `<div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                        <span>${cat.name}</span>
+                        <span>${currentCurrency} ${formatMoney(spent)} / ${currentCurrency} ${formatMoney(limit)} (${pct}%)</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar ${barColor}" style="width: ${pct}%;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderRecentTransactions() {
+            const container = document.getElementById('recent-transactions-list');
+            const btnViewAll = document.getElementById('view-all-tx-btn');
+
+            if (btnViewAll) {
+                btnViewAll.innerHTML = `Ver todas (${dailyTransactions.length}) <i class="bi bi-arrow-right ms-1"></i>`;
+            }
+
+            if (dailyTransactions.length === 0) {
+                container.innerHTML = '<span class="text-muted small">No hay movimientos en este mes.</span>';
+                return;
+            }
+
+            container.innerHTML = dailyTransactions.slice(0, 5).map(t => 
+                `<div class="tx-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="tx-title fw-bold text-dark small">${t.description || t.category}</div>
+                        <div class="tx-date text-muted small">${t.date} · ${t.category}</div>
+                    </div>
+                    <div class="fw-bold ${t.type === 'income' ? 'text-success' : 'text-danger'}">
+                        ${t.type === 'income' ? '+' : '-'}${currentCurrency} ${formatMoney(t.amount)}
+                    </div>
+                </div>`
+            ).join('');
+        }
+
+        function loadDailyTransactions() {
+            filterDailyTransactions();
+        }
+
+        function filterDailyTransactions() {
+            const tbody = document.getElementById('daily-tx-table-body');
+            const searchVal = document.getElementById('search-tx-input')?.value.toLowerCase() || '';
+            const typeVal = document.getElementById('filter-tx-type')?.value || 'all';
+
+            let filtered = dailyTransactions.filter(t => {
+                const matchesSearch = (t.description || '').toLowerCase().includes(searchVal) || (t.category || '').toLowerCase().includes(searchVal);
+                const matchesType = (typeVal === 'all') || (t.type === typeVal);
+                return matchesSearch && matchesType;
+            });
+
+            const countBadge = document.getElementById('tx-count-badge');
+            if (countBadge) countBadge.innerText = `${filtered.length} Movimiento(s)`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No se encontraron movimientos.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((t, idx) => `
+                <tr>
+                    <td class="fw-semibold">${t.date}</td>
+                    <td>
+                        <span class="badge ${t.type === 'income' ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'} rounded-pill">
+                            ${t.type === 'income' ? 'Crédito (+)' : 'Débito (-)'}
+                        </span>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${t.category}</span></td>
+                    <td class="small fw-medium">${t.description || 'Sin nota'}</td>
+                    <td class="fw-bold ${t.type === 'income' ? 'text-success' : 'text-danger'}">
+                        ${t.type === 'income' ? '+' : '-'}${currentCurrency} ${formatMoney(t.amount)}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTransaction(${idx})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteTransaction(idx) {
+            const tx = dailyTransactions[idx];
+            if (!tx) return;
+
+            if (confirm('¿Deseas eliminar este movimiento?')) {
+                if (supabaseClient && currentUserId && currentUserId !== 'invitado' && tx.id) {
+                    await supabaseClient.from('daily_transactions').delete().eq('id', tx.id);
+                }
+                dailyTransactions.splice(idx, 1);
+                loadAllAppData();
+            }
+        }
+
+        function updateDashboardMetrics() {
+            let totalIncome = 0;
+            let totalExpenses = 0;
+
+            dailyTransactions.forEach(t => {
+                if (t.type === 'income') totalIncome += parseFloat(t.amount);
+                else totalExpenses += parseFloat(t.amount);
+            });
+
+            const goalsDebit = goalsList.reduce((acc, g) => acc + (parseFloat(g.monthly_debit) || 0), 0);
+            const balance = totalIncome - totalExpenses - goalsDebit;
+
+            document.getElementById('dash-income').innerText = `${currentCurrency} ${formatMoney(totalIncome)}`;
+            document.getElementById('dash-expenses').innerText = `-${currentCurrency} ${formatMoney(totalExpenses)}`;
+            document.getElementById('dash-balance').innerText = `${currentCurrency} ${formatMoney(balance)}`;
+
+            if (balance < 0 && totalIncome > 0) {
+                document.getElementById('emergency-screen').classList.remove('d-none');
+            } else {
+                document.getElementById('emergency-screen').classList.add('d-none');
+            }
+
+            renderCharts();
+        }
+
+        function closeEmergency() {
+            document.getElementById('emergency-screen').classList.add('d-none');
+        }
+
+        async function processBankFile() {
+            const fileInput = document.getElementById('bank-file-input');
+            if (!fileInput.files.length) return alert('Por favor, selecciona un archivo.');
+
+            const file = fileInput.files[0];
+            showLoading("Leyendo Estado de Cuenta...", "Analizando transacciones del archivo BI. Por favor espera unos segundos.");
+
+            setTimeout(async () => {
+                try {
+                    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                        await parseBIPdfStatement(file);
+                    } else {
+                        await parseBICsvOrExcelStatement(file);
+                    }
+                } catch (err) {
+                    alert("Error al procesar el archivo: " + err.message);
+                } finally {
+                    hideLoading();
+                }
+            }, 300);
+        }
+
+        // 1. CLASIFICADOR LOCAL (RESPALDO AUTOMÁTICO DE ALTA FIABILIDAD)
+        function autoCategorizeTransaction(description) {
+            const desc = (description || '').toUpperCase();
+
+            if (/DOMINOS|CAMPERO|DELICIAS|LAI LAI|MCDONALD|CAESARS|PEDIDOSYA|RESTAURANTE|CHICHARRONERA|ALMUERZO|SUPERMERCADO|SUPER 24|PUMA VILLALO|TACO/i.test(desc)) {
+                return "Comida / Supermercado";
+            }
+            if (/EST\. DE SERV|MONTECAL|PUMA|PARQUEO|GASOLINERA|TRANSPORTE|UBER|SHELL|UNO/i.test(desc)) {
+                return "Transporte";
+            }
+            if (/FARMA|VALUE|GALENO|BATRES|MEDIC|SALUD/i.test(desc)) {
+                return "Salud / Farmacia";
+            }
+            if (/MATERIALES|ARENA|MANO DE OBRA|LAMINAS|TUBOS|PLANO|GARITA|CASA|COBAN|ALQUILER/i.test(desc)) {
+                return "Alquiler / Casa";
+            }
+            if (/UNIVERSIDAD|TIGO|CLARO|EEGSA|EMPAGUA|LUNA|SERVICIOS|LUZ|AGUA/i.test(desc)) {
+                return "Luz / Servicios";
+            }
+            if (/AIRBNB|HOTEL|OFFICE DEPOT|TIENDA|CONVENIENCIA|GAME|NETFLIX|SPOTIFY/i.test(desc)) {
+                return "Compras / Entretenimiento";
+            }
+            if (/TRANSFERENCIA|BANCA MOVIL|ACH|PRESTAMO|PAGO ELECTRONICO|CREDITO/i.test(desc)) {
+                return "Transferencias / Pagos";
+            }
+
+            return "Comida / Supermercado";
+        }
+
+        // 2. MOTOR DE IA CON GEMINI V2.5
+        async function categorizeTransactionsWithAI(descriptionsList) {
+            const GEMINI_API_KEY = "AQ.Ab8RN6Iiu4QsXvYet7w1171YT7YueB6_aQD2Qcq6uv5myM-USw"; 
+
+            if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "") {
+                console.warn("No hay API Key. Usando categorización local de respaldo.");
+                return descriptionsList.map(desc => autoCategorizeTransaction(desc));
+            }
+
+            const validCategories = [
+                "Comida / Supermercado",
+                "Alquiler / Casa",
+                "Luz / Servicios",
+                "Salud / Farmacia",
+                "Transporte",
+                "Compras / Entretenimiento",
+                "Transferencias / Pagos"
+            ];
+
+            const prompt = `Actúa como un asistente financiero para clasificar consumos en Guatemala.
+Categoriza cada descripción bancaria en exactamente UNA de las siguientes opciones permitidas:
+${JSON.stringify(validCategories)}
+
+Reglas de mapeo:
+- Restaurantes, comida rápida, supermercados, chicharroneras -> "Comida / Supermercado"
+- Gasolineras, parqueos, Uber, transporte -> "Transporte"
+- Materiales de construcción, mano de obra, láminas, garita, coban, casa -> "Alquiler / Casa"
+- Luz, energía, teléfono, internet, cable, EEGSA, EMPAGUA -> "Luz / Servicios"
+- Farmacias, medicinas, hospitales -> "Salud / Farmacia"
+- Compras variadas, tiendas de conveniencia, entretenimientos -> "Compras / Entretenimiento"
+- Transferencias, envíos ACH, préstamos -> "Transferencias / Pagos"
+
+Responde ÚNICAMENTE con un arreglo JSON puro de strings en el mismo orden recibido. Ejemplo: ["Comida / Supermercado", "Transporte"]
+
+Lista de consumos a clasificar:
+${JSON.stringify(descriptionsList)}`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+
+                const data = await response.json();
+                const rawText = data.candidates[0].content.parts[0].text;
+                
+                const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(jsonString);
+
+                if (Array.isArray(parsed) && parsed.length === descriptionsList.length) {
+                    return parsed.map((cat, idx) => validCategories.includes(cat) ? cat : autoCategorizeTransaction(descriptionsList[idx]));
+                }
+                throw new Error("Respuesta devuelta por IA no coincide en longitud");
+            } catch (err) {
+                console.warn("Fallo de llamada a la API de Gemini. Aplicando clasificador local:", err);
+                return descriptionsList.map(desc => autoCategorizeTransaction(desc));
+            }
+        }
+
+        // 3. PARSER PARA ESTADOS DE CUENTA EN PDF
+        async function parseBIPdfStatement(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            let fullTextLines = [];
+            let detectedYear = selectedPeriod.split('-')[0];
+            let detectedMonth = selectedPeriod.split('-')[1];
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+                
+                let lineMap = {};
+                textContent.items.forEach(item => {
+                    const y = Math.round(item.transform[5]);
+                    if (!lineMap[y]) lineMap[y] = [];
+                    lineMap[y].push(item.str);
+                });
+
+                const sortedY = Object.keys(lineMap).sort((a, b) => b - a);
+                sortedY.forEach(y => {
+                    const lineText = lineMap[y].join(' ').trim();
+                    if (lineText) fullTextLines.push(lineText);
+                });
+            }
+
+            const fullText = fullTextLines.join(' ');
+
+            // 1. Detectar Mes y Año
+            const monthHeaderMatch = fullText.match(/(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\/([0-9]{2})/i);
+            if (monthHeaderMatch) {
+                const monthNames = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+                const monthIdx = monthNames.indexOf(monthHeaderMatch[1].toUpperCase()) + 1;
+                detectedMonth = monthIdx < 10 ? '0' + monthIdx : '' + monthIdx;
+                detectedYear = '20' + monthHeaderMatch[2];
+                selectedPeriod = `${detectedYear}-${detectedMonth}`;
+                document.getElementById('selected-month').value = selectedPeriod;
+            }
+
+            // 2. Extraer Saldo Inicial
+            let initialBalance = 0;
+            const initialBalanceMatch = fullText.match(/(?:Saldo inicio de mes|SALDO ANTERIOR)[^\d]*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/i);
+            if (initialBalanceMatch) {
+                initialBalance = parseFloat(initialBalanceMatch[1].replace(/,/g, ''));
+            }
+
+            if (initialBalance > 0) {
+                const initTx = {
+                    type: 'income',
+                    category: 'Saldo Inicial BI',
+                    amount: initialBalance,
+                    date: `${detectedYear}-${detectedMonth}-01`,
+                    description: 'Saldo Arrastrado del Mes Anterior'
+                };
+
+                if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                    await supabaseClient.from('daily_transactions').insert([{ user_id: currentUserId, ...initTx }]);
+                } else {
+                    dailyTransactions = dailyTransactions.filter(t => t.category !== 'Saldo Inicial BI');
+                    dailyTransactions.push(initTx);
+                }
+            }
+
+            // 3. Extraer transacciones del PDF
+            let rawTransactions = [];
+            let descriptionsToCategorize = [];
+            const numberRegex = /([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/g;
+
+            for (let i = 0; i < fullTextLines.length; i++) {
+                const line = fullTextLines[i];
+                const dayMatch = line.match(/^([0-3][0-9])\s+/);
+                const amounts = line.match(numberRegex);
+
+                if (dayMatch && amounts && amounts.length >= 2) {
+                    const day = dayMatch[1];
+                    const dateStr = `${detectedYear}-${detectedMonth}-${day}`;
+                    
+                    const lastAmountStr = amounts[amounts.length - 2] || amounts[0];
+                    const amount = parseFloat(lastAmountStr.replace(/,/g, ''));
+                    let desc = line.replace(/^[0-3][0-9]\s+/, '').replace(numberRegex, '').trim();
+
+                    let type = 'expense';
+                    if (line.toUpperCase().includes('CREDITO') || line.toUpperCase().includes('DEPOSITO') || line.toUpperCase().includes('ACH')) {
+                        type = 'income';
+                    }
+
+                    if (amount > 0 && !line.includes('SALDO ANTERIOR') && !line.includes('ULTIMA LINEA')) {
+                        rawTransactions.push({ type, date: dateStr, amount, description: desc.slice(0, 45) || 'Movimiento BI' });
+                        if (type === 'expense') {
+                            descriptionsToCategorize.push(desc);
+                        }
+                    }
+                }
+            }
+
+            showLoading("Clasificando movimientos...", "Categorizando establecimientos del estado de cuenta.");
+
+            // 4. Categorización en lote
+            const aiCategories = await categorizeTransactionsWithAI(descriptionsToCategorize);
+
+            let expenseIdx = 0;
+            let count = 0;
+
+            for (let tx of rawTransactions) {
+                let catName = 'Salario';
+                if (tx.type === 'expense') {
+                    catName = aiCategories[expenseIdx] || autoCategorizeTransaction(tx.description);
+                    expenseIdx++;
+                }
+
+                const newTx = { ...tx, category: catName };
+
+                if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                    await supabaseClient.from('daily_transactions').insert([{ user_id: currentUserId, ...newTx }]);
+                } else {
+                    dailyTransactions.push(newTx);
+                }
+                count++;
+            }
+
+            loadAllAppData();
+            alert(`¡Estado de Cuenta clasificado e importado con éxito!\n\n• Saldo Inicial: Q ${formatMoney(initialBalance)}\n• Transacciones procesadas: ${count}`);
+        }
+
+        function parseBICsvOrExcelStatement(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                        let count = 0;
+                        for (let i = 1; i < rows.length; i++) {
+                            const row = rows[i];
+                            if (row.length >= 3) {
+                                const date = row[0] || new Date().toISOString().slice(0, 10);
+                                const desc = row[1] || 'Importación BI';
+                                const amount = Math.abs(parseFloat(row[2]) || 0);
+                                const type = (parseFloat(row[2]) < 0 || desc.toLowerCase().includes('compra')) ? 'expense' : 'income';
+
+                                if (amount > 0) {
+                                    const catName = type === 'income' ? 'Salario' : autoCategorizeTransaction(desc);
+                                    const newTx = { type, category: catName, amount, date, description: desc };
+                                    if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                                        await supabaseClient.from('daily_transactions').insert([{ user_id: currentUserId, ...newTx }]);
+                                    } else {
+                                        dailyTransactions.push(newTx);
+                                    }
+                                    count++;
+                                }
+                            }
+                        }
+                        loadAllAppData();
+                        alert(`¡Se importaron ${count} transacciones desde Excel/CSV!`);
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function parseSmsNotification() {
+            const text = document.getElementById('sms-text-input').value;
+            if (!text) return alert('Pega un mensaje válido.');
+
+            const amountMatch = text.match(/(?:Q\.?|\$|EUR)\s?([0-9]+(?:\.[0-9]{2})?)/i) || 
+                                text.match(/(?:por|de)\s(?:Q\.?|\$|EUR)?\s?([0-9]+(?:\.[0-9]{2})?)/i);
+                        
+            const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+
+            let type = 'expense';
+            const lowerText = text.toLowerCase();
+            
+            if (lowerText.includes('acredita') || lowerText.includes('deposito') || lowerText.includes('abono') || lowerText.includes('credito')) {
+                type = 'income';
+            }
+
+            if (amount <= 0) return alert('No se pudo detectar el monto automáticamente.');
+
+            let description = 'Notificación BiMovil';
+            if (lowerText.includes('debito por')) {
+                description = text.split(/debito por/i)[1].trim();
+            } else if (lowerText.includes('compra realizada en')) {
+                description = text.split(/compra realizada en/i)[1].trim();
+            } else if (text.length > 0) {
+                description = text.slice(0, 50);
+            }
+
+            const catName = type === 'income' ? 'Salario' : autoCategorizeTransaction(description);
+
+            const newTx = {
+                type,
+                category: catName,
+                amount,
+                date: new Date().toISOString().slice(0, 10),
+                description: description.slice(0, 45)
+            };
+
+            if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                supabaseClient.from('daily_transactions').insert([{ user_id: currentUserId, ...newTx }])
+                    .then(() => loadAllAppData());
+            } else {
+                dailyTransactions.unshift(newTx);
+                loadAllAppData();
+            }
+
+            alert(`Transacción registrada correctamente: ${type === 'income' ? '+' : '-'}Q ${formatMoney(amount)}`);
+            document.getElementById('sms-text-input').value = '';
+        }
+
+        async function addCustomCategory() {
+            const name = document.getElementById('new-cat-name').value;
+            const limit = parseFloat(document.getElementById('new-cat-limit').value) || 0;
+
+            if (!name || limit <= 0) return alert('Completa los campos.');
+
+            if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                await supabaseClient.from('custom_categories').insert([{ user_id: currentUserId, name, budget_limit: limit }]);
+            } else {
+                customCategories.push({ name, budget_limit: limit });
+            }
+
+            document.getElementById('new-cat-name').value = '';
+            document.getElementById('new-cat-limit').value = '';
+            loadAllAppData();
+        }
+
+        function calculateEmergencyFund() {
+            let totalExp = 0;
+            dailyTransactions.forEach(t => { if (t.type === 'expense') totalExp += parseFloat(t.amount); });
+
+            document.getElementById('avg-monthly-expense').innerText = `${currentCurrency} ${formatMoney(totalExp)}`;
+            document.getElementById('current-savings-fund').innerText = `${currentCurrency} ${formatMoney(totalSavingsFund)}`;
+
+            const months = totalExp > 0 ? (totalSavingsFund / totalExp) : 0;
+            document.getElementById('freedom-months').innerText = `${months.toFixed(1)} Meses`;
+
+            const statusEl = document.getElementById('freedom-status-text');
+            if (months >= 6) statusEl.innerText = "¡Excelente! Cuentas con un fondo sólido de respaldo.";
+            else if (months >= 3) statusEl.innerText = "Buen nivel de respaldo, procura llegar a 6 meses.";
+            else statusEl.innerText = "Fondo vulnerable. Se recomienda ahorrar más para emergencias.";
+        }
+
+        function updateEmergencySavings() {
+            const amount = parseFloat(document.getElementById('update-emergency-input').value) || 0;
+            totalSavingsFund = amount;
+            calculateEmergencyFund();
+        }
+
+        function calculateMonthlyDebit() {
+            const target = parseFloat(document.getElementById('goal-target-amount').value) || 0;
+            const months = parseInt(document.getElementById('goal-target-months').value) || 1;
+            document.getElementById('goal-monthly-debit').value = (target / months).toFixed(2);
+        }
+
+        async function saveGoal() {
+            const name = document.getElementById('goal-name-input').value;
+            const target_amount = parseFloat(document.getElementById('goal-target-amount').value) || 0;
+            const target_months = parseInt(document.getElementById('goal-target-months').value) || 1;
+            const monthly_debit = parseFloat(document.getElementById('goal-monthly-debit').value) || 0;
+
+            if (!name) return alert('Asigna un nombre.');
+
+            if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                await supabaseClient.from('goals').insert([{ user_id: currentUserId, name, target_amount, target_months, monthly_debit }]);
+            } else {
+                goalsList.push({ name, target_amount, target_months, monthly_debit });
+            }
+            showSection('dashboard-section');
+            loadAllAppData();
+        }
+
+        function openResetConfirmation() {
+            const settingsModal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
+            if (settingsModal) settingsModal.hide();
+            new bootstrap.Modal(document.getElementById('confirmResetModal')).show();
+        }
+
+        async function executeResetData() {
+            if (supabaseClient && currentUserId && currentUserId !== 'invitado') {
+                await supabaseClient.from('daily_transactions').delete().eq('user_id', currentUserId);
+                await supabaseClient.from('custom_categories').delete().eq('user_id', currentUserId);
+                await supabaseClient.from('goals').delete().eq('user_id', currentUserId);
+            }
+            dailyTransactions = [];
+            customCategories = [];
+            goalsList = [];
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmResetModal'));
+            if (modal) modal.hide();
+            loadAllAppData();
+        }
+
+        // DIBUJO DINÁMICO DE GRÁFICAS SEGÚN TRANSACCIONES REALES
+        function renderCharts() {
+            const ctxBar = document.getElementById('barChart');
+            if (ctxBar) {
+                if (barChartInstance) barChartInstance.destroy();
+
+                const weekTotals = [0, 0, 0, 0];
+                dailyTransactions.forEach(t => {
+                    if (t.type === 'expense' && t.date) {
+                        const day = parseInt(t.date.split('-')[2]) || 1;
+                        if (day <= 7) weekTotals[0] += parseFloat(t.amount);
+                        else if (day <= 14) weekTotals[1] += parseFloat(t.amount);
+                        else if (day <= 21) weekTotals[2] += parseFloat(t.amount);
+                        else weekTotals[3] += parseFloat(t.amount);
+                    }
+                });
+
+                barChartInstance = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
+                        datasets: [{
+                            label: 'Gastos acumulados',
+                            data: weekTotals,
+                            backgroundColor: '#ff4d6d',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: { plugins: { legend: { display: false } }, responsive: true }
+                });
+            }
+
+            const ctxDonut = document.getElementById('donutChart');
+            if (ctxDonut) {
+                if (donutChartInstance) donutChartInstance.destroy();
+
+                const categoryTotals = {};
+                dailyTransactions.forEach(t => {
+                    if (t.type === 'expense') {
+                        const cat = t.category || 'Otros';
+                        categoryTotals[cat] = (categoryTotals[cat] || 0) + parseFloat(t.amount);
+                    }
+                });
+
+                const labels = Object.keys(categoryTotals);
+                const dataValues = Object.values(categoryTotals);
+
+                const palette = ['#ffc107', '#dc3545', '#0dcaf0', '#198754', '#6f42c1', '#fd7e14', '#20c997'];
+
+                donutChartInstance = new Chart(ctxDonut, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels.length > 0 ? labels : ['Sin datos'],
+                        datasets: [{
+                            data: dataValues.length > 0 ? dataValues : [1],
+                            backgroundColor: dataValues.length > 0 ? palette.slice(0, labels.length) : ['#e0e0e0'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { cutout: '70%', plugins: { legend: { display: true, position: 'bottom' } }, responsive: true }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
