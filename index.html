@@ -89,7 +89,7 @@
                 <h4 class="fw-bold mb-0">MasterBudget Pro</h4>
                 <div class="d-flex align-items-center gap-2 bg-white px-3 py-1 rounded-pill border shadow-sm ms-3">
                     <i class="bi bi-calendar3 text-muted"></i>
-                    <input type="month" id="selected-month" class="form-control form-control-sm border-0 bg-transparent fw-semibold" style="width: 145px;" onchange="onPeriodChange()">
+                    <input type="month" id="selected-month" class="form-control form-control-sm border-0 bg-transparent fw-semibold" style="width: 135px;" onchange="onPeriodChange()">
                 </div>
             </div>
             
@@ -114,25 +114,33 @@
             </div>
         </header>
 
-        <!-- SECCIÓN 1: LOGIN -->
-        <section id="login-section" class="dashboard-card mx-auto mt-5" style="max-width: 400px;">
-            <h3 class="text-center mb-4 fw-bold">Iniciar Sesión</h3>
+  <!-- SECCIÓN 1: LOGIN -->
+        <section id="login-section" class="dashboard-card mx-auto mt-5" style="max-width: 420px;">
+            <div class="text-center mb-4">
+                <div class="login-brand-badge d-inline-flex align-items-center justify-content-center rounded-circle mb-2">
+                    <i class="bi bi-wallet2 fs-3"></i>
+                </div>
+                <h2 class="login-brand-title fw-bold mb-1" style="letter-spacing: -0.5px;">MasterBudget Pro</h2>
+                <p class="text-muted small mb-0">Gestión Financiera Inteligente</p>
+            </div>
+            
+            <h5 class="text-center mb-3 fw-semibold">Iniciar Sesión</h5>
             <button type="button" class="btn btn-outline-dark w-100 mb-2 py-2 fw-medium" onclick="loginWithGoogle()"><i class="bi bi-google me-2"></i>Continuar con Google</button>
             <button type="button" class="btn btn-light border w-100 mb-3 py-2 fw-medium" onclick="loginAsGuest()"><i class="bi bi-person me-2"></i>Continuar como Invitado</button>
             <hr class="my-4">
             <form id="login-form">
                 <div class="mb-3">
-                    <label class="form-label small text-muted">Correo Electrónico</label>
-                    <input type="email" id="login-email" class="form-control" required>
+                    <label class="form-label small fw-semibold">Correo Electrónico</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="tu@correo.com" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small text-muted">Contraseña</label>
-                    <input type="password" id="login-password" class="form-control" required>
+                    <label class="form-label small fw-semibold">Contraseña</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Ingresar / Registrarse</button>
             </form>
         </section>
-
+        </section>
         <!-- SECCIÓN PRINCIPAL: DASHBOARD -->
         <section id="dashboard-section" class="d-none">
             <!-- ACCIONES RÁPIDAS -->
@@ -1406,8 +1414,12 @@ ${JSON.stringify(descriptionsList)}`;
             loadAllAppData();
         }
 
-        // DIBUJO DINÁMICO DE GRÁFICAS SEGÚN TRANSACCIONES REALES
+       // DIBUJO DINÁMICO DE GRÁFICAS CON CONTRASTE DE PALETA (NAVY + DORADO + BEIGE)
         function renderCharts() {
+            const isDark = document.body.classList.contains('dark-theme');
+            const textColor = isDark ? '#EAE7E1' : '#10254D';
+            const gridColor = isDark ? 'rgba(203, 176, 130, 0.15)' : 'rgba(16, 37, 77, 0.08)';
+
             const ctxBar = document.getElementById('barChart');
             if (ctxBar) {
                 if (barChartInstance) barChartInstance.destroy();
@@ -1430,11 +1442,35 @@ ${JSON.stringify(descriptionsList)}`;
                         datasets: [{
                             label: 'Gastos acumulados',
                             data: weekTotals,
-                            backgroundColor: '#ff4d6d',
-                            borderRadius: 6
+                            backgroundColor: isDark ? '#CBB082' : '#10254D',
+                            hoverBackgroundColor: isDark ? '#EAE7E1' : '#CBB082',
+                            borderRadius: 8,
+                            barPercentage: 0.55
                         }]
                     },
-                    options: { plugins: { legend: { display: false } }, responsive: true }
+                    options: {
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: isDark ? '#0A0A0A' : '#10254D',
+                                titleColor: '#CBB082',
+                                bodyColor: '#EAE7E1',
+                                borderColor: '#CBB082',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: textColor, font: { weight: '600' } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                ticks: { color: textColor },
+                                grid: { color: gridColor }
+                            }
+                        },
+                        responsive: true
+                    }
                 });
             }
 
@@ -1453,7 +1489,10 @@ ${JSON.stringify(descriptionsList)}`;
                 const labels = Object.keys(categoryTotals);
                 const dataValues = Object.values(categoryTotals);
 
-                const palette = ['#ffc107', '#dc3545', '#0dcaf0', '#198754', '#6f42c1', '#fd7e14', '#20c997'];
+                // Paleta elegante con alto contraste tanto sobre fondo marino oscuro como sobre blanco
+                const palette = isDark
+                    ? ['#CBB082', '#EAE7E1', '#6B8CC7', '#A38A5E', '#B8BCC4', '#4A6FA5', '#DFC9A6']
+                    : ['#10254D', '#CBB082', '#2E4A7D', '#8E734A', '#6C7077', '#1B3B73', '#B89B6A'];
 
                 donutChartInstance = new Chart(ctxDonut, {
                     type: 'doughnut',
@@ -1461,11 +1500,36 @@ ${JSON.stringify(descriptionsList)}`;
                         labels: labels.length > 0 ? labels : ['Sin datos'],
                         datasets: [{
                             data: dataValues.length > 0 ? dataValues : [1],
-                            backgroundColor: dataValues.length > 0 ? palette.slice(0, labels.length) : ['#e0e0e0'],
-                            borderWidth: 0
+                            backgroundColor: dataValues.length > 0 ? palette.slice(0, labels.length) : ['rgba(203, 176, 130, 0.25)'],
+                            borderColor: isDark ? '#10254D' : '#FFFFFF',
+                            borderWidth: 3,
+                            hoverOffset: 6
                         }]
                     },
-                    options: { cutout: '70%', plugins: { legend: { display: true, position: 'bottom' } }, responsive: true }
+                    options: {
+                        cutout: '72%',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    color: textColor,
+                                    padding: 16,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    font: { size: 12, weight: '600' }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: isDark ? '#0A0A0A' : '#10254D',
+                                titleColor: '#CBB082',
+                                bodyColor: '#EAE7E1',
+                                borderColor: '#CBB082',
+                                borderWidth: 1
+                            }
+                        },
+                        responsive: true
+                    }
                 });
             }
         }
