@@ -79,7 +79,6 @@ body {
 .text-warning { color: var(--gold-accent) !important; }
 .text-muted { color: var(--text-muted) !important; }
 
-/* Ancho suficiente para "noviembre de 2026" sin recortes */
 #selected-month {
     width: 175px !important;
     min-width: 175px !important;
@@ -91,7 +90,7 @@ body.dark-theme {
     --card-bg: #10254D;         /* Tarjetas en Azul Marino */
     --text-main: #EAE7E1;       /* Texto claro en Beige cálido */
     --text-muted: #CBB082;      /* Subtítulos en Dorado arena */
-    color-scheme: dark;         /* Hace que el calendario nativo y su ícono sean claros */
+    color-scheme: dark;
 }
 
 body.dark-theme .login-brand-badge {
@@ -112,7 +111,7 @@ body.dark-theme .modal-content {
     color: var(--text-main);
 }
 
-/* BOTONES EN MODO OSCURO (CONTRASTE GARANTIZADO) */
+/* BOTONES EN MODO OSCURO */
 body.dark-theme .btn-dark {
     background-color: var(--gold-accent) !important;
     border-color: var(--gold-accent) !important;
@@ -175,7 +174,6 @@ body.dark-theme .btn-outline-success {
     border-color: #4ade80 !important;
 }
 
-/* BOTÓN DE PERFIL ("Modo Invitado") Y BOTÓN DE TEMA EN NAVBAR */
 body.dark-theme .btn-white,
 body.dark-theme .btn-white span,
 body.dark-theme #user-greeting {
@@ -217,7 +215,7 @@ body.dark-theme .input-group-text {
     color: #EAE7E1 !important;
 }
 
-/* TABLAS EN MODO OSCURO (ELIMINA EL FONDO BLANCO DE LAS FILAS) */
+/* TABLAS EN MODO OSCURO */
 body.dark-theme .table {
     --bs-table-bg: #10254D;
     --bs-table-color: #EAE7E1;
@@ -277,6 +275,30 @@ body.dark-theme .dropdown-item {
 body.dark-theme .dropdown-item:hover {
     background-color: var(--gold-accent);
     color: #0A0A0A;
+}
+
+/* === BURBUJAS DE CHAT CONSEJOS FINANCIEROS === */
+.ai-bubble-bot {
+    background-color: var(--card-bg);
+    color: var(--text-main);
+    border: 1px solid var(--surface-muted);
+}
+
+.ai-bubble-user {
+    background-color: var(--navy-primary);
+    color: #FFFFFF;
+}
+
+body.dark-theme .ai-bubble-bot {
+    background-color: #0A1730;
+    color: #EAE7E1;
+    border-color: rgba(203, 176, 130, 0.35);
+}
+
+body.dark-theme .ai-bubble-user {
+    background-color: var(--gold-accent);
+    color: #0A0A0A;
+    font-weight: 600;
 }
 
 /* === ESTRUCTURA GENERAL === */

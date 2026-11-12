@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Librerías para Exportar a Excel y PDF sin fallos de CDN -->
+    <!-- Librerías para Exportar a Excel y PDF -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- PDF.js de Mozilla para leer Estados de Cuenta BI en PDF -->
@@ -42,7 +42,7 @@
         </div>
     </div>
 
-    <!-- SIDEBAR DE NAVEGACIÓN CON NOMBRES DEBAJO -->
+    <!-- SIDEBAR DE NAVEGACIÓN -->
     <aside id="app-sidebar" class="sidebar-nav d-none">
         <div class="mb-3 text-primary fs-3"><i class="bi bi-wallet2"></i></div>
         
@@ -74,6 +74,10 @@
             <i class="bi bi-journal-text"></i>
             <span>Histórico</span>
         </a>
+        <a class="sidebar-icon" onclick="showSection('ai-advisor-section')" title="Consejos Financieros">
+            <i class="bi bi-robot"></i>
+            <span>Consejos</span>
+        </a>
         
         <a class="sidebar-icon mt-auto mb-3" data-bs-toggle="modal" data-bs-target="#settingsModal" title="Ajustes">
             <i class="bi bi-gear"></i>
@@ -89,7 +93,7 @@
                 <h4 class="fw-bold mb-0">MasterBudget Pro</h4>
                 <div class="d-flex align-items-center gap-2 bg-white px-3 py-1 rounded-pill border shadow-sm ms-3">
                     <i class="bi bi-calendar3 text-muted"></i>
-                    <input type="month" id="selected-month" class="form-control form-control-sm border-0 bg-transparent fw-semibold" style="width: 135px;" onchange="onPeriodChange()">
+                    <input type="month" id="selected-month" class="form-control form-control-sm border-0 bg-transparent fw-semibold" style="width: 175px;" onchange="onPeriodChange()">
                 </div>
             </div>
             
@@ -101,7 +105,7 @@
                 <div class="dropdown">
                     <button class="btn btn-white border rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
                         <img id="user-avatar" src="" class="rounded-circle d-none" width="28" height="28">
-                        <span id="user-greeting" class="fw-semibold text-dark fs-6">Cargando...</span>
+                        <span id="user-greeting" class="fw-semibold fs-6">Cargando...</span>
                         <i class="bi bi-chevron-down small text-muted"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 mt-2">
@@ -114,7 +118,7 @@
             </div>
         </header>
 
-  <!-- SECCIÓN 1: LOGIN -->
+        <!-- SECCIÓN 1: LOGIN -->
         <section id="login-section" class="dashboard-card mx-auto mt-5" style="max-width: 420px;">
             <div class="text-center mb-4">
                 <div class="login-brand-badge d-inline-flex align-items-center justify-content-center rounded-circle mb-2">
@@ -140,7 +144,7 @@
                 <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Ingresar / Registrarse</button>
             </form>
         </section>
-        </section>
+
         <!-- SECCIÓN PRINCIPAL: DASHBOARD -->
         <section id="dashboard-section" class="d-none">
             <!-- ACCIONES RÁPIDAS -->
@@ -149,7 +153,7 @@
                     <button class="btn btn-dark rounded-pill px-4" onclick="showSection('daily-tx-section')"><i class="bi bi-plus-circle me-2"></i>Nueva Transacción</button>
                     <button class="btn btn-outline-primary rounded-pill px-4" onclick="showSection('bank-import-section')"><i class="bi bi-upload me-2"></i>Importar Estado de Cuenta BI</button>
                     <button class="btn btn-outline-success rounded-pill px-4" onclick="showSection('goals-section')"><i class="bi bi-flag me-2"></i>Objetivos</button>
-                    <button class="btn btn-outline-warning text-dark rounded-pill px-4" onclick="showSection('categories-section')"><i class="bi bi-tags me-2"></i>Límites</button>
+                    <button class="btn btn-outline-warning rounded-pill px-4" onclick="showSection('categories-section')"><i class="bi bi-tags me-2"></i>Límites</button>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-secondary rounded-pill px-3" onclick="exportToExcel()"><i class="bi bi-file-earmark-excel text-success me-1"></i> Excel</button>
@@ -285,7 +289,6 @@
         <!-- SECCIÓN: IMPORTADOR BANCO BI (PDF / CSV) Y SMS -->
         <section id="bank-import-section" class="d-none">
             <div class="row g-4">
-                <!-- IMPORTAR PDF DE BANCO INDUSTRIAL -->
                 <div class="col-md-6">
                     <div class="dashboard-card">
                         <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>Importar Estado de Cuenta BI (PDF)</h5>
@@ -298,7 +301,6 @@
                     </div>
                 </div>
 
-                <!-- PARSER DE SMS O NOTIFICACIÓN BI -->
                 <div class="col-md-6">
                     <div class="dashboard-card">
                         <h5 class="fw-bold mb-3"><i class="bi bi-chat-text text-primary me-2"></i>Pegar Notificación SMS / Correo</h5>
@@ -421,6 +423,46 @@
             </div>
         </section>
 
+        <!-- SECCIÓN: CONSEJOS FINANCIEROS (CHAT IA) -->
+        <section id="ai-advisor-section" class="d-none">
+            <div class="dashboard-card mx-auto d-flex flex-column" style="max-width: 820px; height: 78vh;">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3 flex-wrap gap-2">
+                    <div>
+                        <h4 class="fw-bold mb-0"><i class="bi bi-stars me-2 text-warning"></i>Consejos Financieros</h4>
+                        <p class="text-muted small mb-0">Asesoría personalizada basada en tus ingresos, gastos, límites y metas del mes</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="askQuickFinancialPrompt('Analiza mi situación financiera actual de este mes y dame 3 recomendaciones concretas.')">
+                        <i class="bi bi-magic me-1"></i> Diagnóstico Rápido
+                    </button>
+                </div>
+
+                <!-- SUGERENCIAS RÁPIDAS -->
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <button class="btn btn-sm btn-light border rounded-pill" onclick="askQuickFinancialPrompt('¿En qué categoría estoy gastando más y cómo puedo reducirlo?')">¿Dónde gasto más?</button>
+                    <button class="btn btn-sm btn-light border rounded-pill" onclick="askQuickFinancialPrompt('¿Voy bien con mis límites de presupuesto este mes?')">Revisar mis límites</button>
+                    <button class="btn btn-sm btn-light border rounded-pill" onclick="askQuickFinancialPrompt('¿Cuánto debería ahorrar este mes según mi saldo disponible?')">Plan de ahorro</button>
+                </div>
+
+                <!-- CONTENEDOR DE MENSAJES -->
+                <div id="ai-chat-messages" class="flex-grow-1 overflow-y-auto p-3 rounded-4 border mb-3" style="background: var(--bg-canvas);">
+                    <div class="d-flex flex-column align-items-start mb-3">
+                        <div class="p-3 rounded-4 shadow-sm ai-bubble-bot" style="max-width: 82%;">
+                            <div class="small fw-bold mb-1" style="color: var(--gold-accent);"><i class="bi bi-robot me-1"></i> Asesor MasterBudget Pro</div>
+                            <div>¡Hola! Tengo acceso directo a tus movimientos, categorías, objetivos y fondo de emergencia del periodo seleccionado. Pregúntame lo que necesites o pide un diagnóstico rápido.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BARRA DE ENTRADA -->
+                <form id="ai-chat-form" class="d-flex gap-2" onsubmit="sendFinancialChatMessage(event)">
+                    <input type="text" id="ai-chat-input" class="form-control rounded-pill px-4" placeholder="Escribe tu consulta financiera aquí..." required autocomplete="off">
+                    <button type="submit" id="ai-chat-send-btn" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
     </div>
 
     <!-- MODAL NUEVO MOVIMIENTO DIARIO -->
@@ -517,6 +559,8 @@
 
     <!-- CÓDIGO JAVASCRIPT MASTERBUDGET PRO -->
     <script>
+        const GEMINI_API_KEY = "AQ.Ab8RN6JioMJbKQwEGGSVuje1C8cteQJ9S3wqTulVr2s5wu9Pwg";
+
         if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         }
@@ -548,6 +592,7 @@
         let dailyTransactions = [];
         let goalsList = [];
         let totalSavingsFund = 0;
+        let aiChatHistory = [];
 
         function formatMoney(amount) {
             return (parseFloat(amount) || 0).toLocaleString('en-US', {
@@ -664,15 +709,26 @@
             }
         }
 
+        function getRedirectUrl() {
+            if (window.location.protocol === 'file:') {
+                alert('⚠️ Estás abriendo el archivo directamente (file://).\n\nPara usar Google Login en local, abre el proyecto con un servidor local (ej: Live Server en VS Code -> http://127.0.0.1:5500) o usa "Continuar como Invitado".');
+                return null;
+            }
+            return window.location.origin + window.location.pathname;
+        }
+
         async function loginWithGoogle() {
-    if (!supabaseClient) return alert('No hay conexión con Supabase. Usa modo invitado.');
-    try {
-        await supabaseClient.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.href }
-        });
-    } catch (err) { alert(err.message); }
-}
+            if (!supabaseClient) return alert('No hay conexión con Supabase. Usa modo invitado.');
+            const redirectUrl = getRedirectUrl();
+            if (!redirectUrl) return;
+
+            try {
+                await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: redirectUrl }
+                });
+            } catch (err) { alert(err.message); }
+        }
 
         function loginAsGuest() {
             currentUserId = 'invitado';
@@ -694,6 +750,14 @@
             sections.forEach(sec => sec.classList.add('d-none'));
             document.getElementById(sectionId).classList.remove('d-none');
 
+            const navIcons = document.querySelectorAll('.sidebar-icon');
+            navIcons.forEach(icon => {
+                icon.classList.remove('active');
+                if (icon.getAttribute('onclick') && icon.getAttribute('onclick').includes(sectionId)) {
+                    icon.classList.add('active');
+                }
+            });
+
             if (sectionId === 'daily-tx-section') {
                 loadDailyTransactions();
             }
@@ -714,7 +778,7 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            doc.setFillColor(31, 35, 40);
+            doc.setFillColor(16, 37, 77);
             doc.rect(0, 0, 210, 30, 'F');
             doc.setFont("helvetica", "bold");
             doc.setFontSize(20);
@@ -750,7 +814,7 @@
 
             doc.setFontSize(11);
             summaryRows.forEach(([label, val], idx) => {
-                doc.setFillColor(idx % 2 === 0 ? 245 : 255, 245, 245);
+                doc.setFillColor(idx % 2 === 0 ? 234 : 255, idx % 2 === 0 ? 231 : 255, idx % 2 === 0 ? 225 : 255);
                 doc.rect(14, y - 6, 182, 9, 'F');
                 doc.setFont("helvetica", idx === 3 ? "bold" : "normal");
                 doc.text(label, 18, y);
@@ -775,7 +839,7 @@
             doc.setFont("helvetica", "normal");
             dailyTransactions.slice(0, 15).forEach((t, i) => {
                 if (y > 270) { doc.addPage(); y = 20; }
-                doc.setFillColor(i % 2 === 0 ? 250 : 255, 250, 250);
+                doc.setFillColor(i % 2 === 0 ? 245 : 255, i % 2 === 0 ? 245 : 255, i % 2 === 0 ? 245 : 255);
                 doc.rect(14, y - 5, 182, 8, 'F');
                 doc.text(t.date || '', 18, y);
                 doc.text((t.category || '').slice(0, 20), 55, y);
@@ -905,7 +969,7 @@
             container.innerHTML = dailyTransactions.slice(0, 5).map(t => 
                 `<div class="tx-item d-flex justify-content-between align-items-center py-2 border-bottom">
                     <div>
-                        <div class="tx-title fw-bold text-dark small">${t.description || t.category}</div>
+                        <div class="tx-title fw-bold small">${t.description || t.category}</div>
                         <div class="tx-date text-muted small">${t.date} · ${t.category}</div>
                     </div>
                     <div class="fw-bold ${t.type === 'income' ? 'text-success' : 'text-danger'}">
@@ -1022,7 +1086,6 @@
             }, 300);
         }
 
-        // 1. CLASIFICADOR LOCAL (RESPALDO AUTOMÁTICO DE ALTA FIABILIDAD)
         function autoCategorizeTransaction(description) {
             const desc = (description || '').toUpperCase();
 
@@ -1051,12 +1114,8 @@
             return "Comida / Supermercado";
         }
 
-        // 2. MOTOR DE IA CON GEMINI V2.5
         async function categorizeTransactionsWithAI(descriptionsList) {
-            const GEMINI_API_KEY = "AQ.Ab8RN6Iiu4QsXvYet7w1171YT7YueB6_aQD2Qcq6uv5myM-USw"; 
-
             if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "") {
-                console.warn("No hay API Key. Usando categorización local de respaldo.");
                 return descriptionsList.map(desc => autoCategorizeTransaction(desc));
             }
 
@@ -1074,22 +1133,12 @@
 Categoriza cada descripción bancaria en exactamente UNA de las siguientes opciones permitidas:
 ${JSON.stringify(validCategories)}
 
-Reglas de mapeo:
-- Restaurantes, comida rápida, supermercados, chicharroneras -> "Comida / Supermercado"
-- Gasolineras, parqueos, Uber, transporte -> "Transporte"
-- Materiales de construcción, mano de obra, láminas, garita, coban, casa -> "Alquiler / Casa"
-- Luz, energía, teléfono, internet, cable, EEGSA, EMPAGUA -> "Luz / Servicios"
-- Farmacias, medicinas, hospitales -> "Salud / Farmacia"
-- Compras variadas, tiendas de conveniencia, entretenimientos -> "Compras / Entretenimiento"
-- Transferencias, envíos ACH, préstamos -> "Transferencias / Pagos"
-
-Responde ÚNICAMENTE con un arreglo JSON puro de strings en el mismo orden recibido. Ejemplo: ["Comida / Supermercado", "Transporte"]
-
+Responde ÚNICAMENTE con un arreglo JSON puro de strings en el mismo orden recibido.
 Lista de consumos a clasificar:
 ${JSON.stringify(descriptionsList)}`;
 
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1101,7 +1150,6 @@ ${JSON.stringify(descriptionsList)}`;
 
                 const data = await response.json();
                 const rawText = data.candidates[0].content.parts[0].text;
-                
                 const jsonString = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(jsonString);
 
@@ -1110,12 +1158,10 @@ ${JSON.stringify(descriptionsList)}`;
                 }
                 throw new Error("Respuesta devuelta por IA no coincide en longitud");
             } catch (err) {
-                console.warn("Fallo de llamada a la API de Gemini. Aplicando clasificador local:", err);
                 return descriptionsList.map(desc => autoCategorizeTransaction(desc));
             }
         }
 
-        // 3. PARSER PARA ESTADOS DE CUENTA EN PDF
         async function parseBIPdfStatement(file) {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -1144,7 +1190,6 @@ ${JSON.stringify(descriptionsList)}`;
 
             const fullText = fullTextLines.join(' ');
 
-            // 1. Detectar Mes y Año
             const monthHeaderMatch = fullText.match(/(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\/([0-9]{2})/i);
             if (monthHeaderMatch) {
                 const monthNames = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
@@ -1155,7 +1200,6 @@ ${JSON.stringify(descriptionsList)}`;
                 document.getElementById('selected-month').value = selectedPeriod;
             }
 
-            // 2. Extraer Saldo Inicial
             let initialBalance = 0;
             const initialBalanceMatch = fullText.match(/(?:Saldo inicio de mes|SALDO ANTERIOR)[^\d]*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/i);
             if (initialBalanceMatch) {
@@ -1179,7 +1223,6 @@ ${JSON.stringify(descriptionsList)}`;
                 }
             }
 
-            // 3. Extraer transacciones del PDF
             let rawTransactions = [];
             let descriptionsToCategorize = [];
             const numberRegex = /([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/g;
@@ -1212,8 +1255,6 @@ ${JSON.stringify(descriptionsList)}`;
             }
 
             showLoading("Clasificando movimientos...", "Categorizando establecimientos del estado de cuenta.");
-
-            // 4. Categorización en lote
             const aiCategories = await categorizeTransactionsWithAI(descriptionsToCategorize);
 
             let expenseIdx = 0;
@@ -1393,6 +1434,28 @@ ${JSON.stringify(descriptionsList)}`;
             loadAllAppData();
         }
 
+        function loadHistoryTable() {
+            const tbody = document.getElementById('history-table-body');
+            let totalInc = 0, totalExp = 0;
+            dailyTransactions.forEach(t => {
+                if (t.type === 'income') totalInc += parseFloat(t.amount);
+                else totalExp += parseFloat(t.amount);
+            });
+            const goalsDebit = goalsList.reduce((acc, g) => acc + (parseFloat(g.monthly_debit) || 0), 0);
+            const balance = totalInc - totalExp - goalsDebit;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td class="fw-bold">${selectedPeriod}</td>
+                    <td class="text-success fw-semibold">${currentCurrency} ${formatMoney(totalInc)}</td>
+                    <td class="text-danger fw-semibold">-${currentCurrency} ${formatMoney(totalExp)}</td>
+                    <td>${currentCurrency} ${formatMoney(goalsDebit)}</td>
+                    <td class="fw-bold">${currentCurrency} ${formatMoney(balance)}</td>
+                    <td><button class="btn btn-sm btn-outline-primary" onclick="showSection('dashboard-section')">Ver Detalle</button></td>
+                </tr>
+            `;
+        }
+
         function openResetConfirmation() {
             const settingsModal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
             if (settingsModal) settingsModal.hide();
@@ -1414,7 +1477,7 @@ ${JSON.stringify(descriptionsList)}`;
             loadAllAppData();
         }
 
-       // DIBUJO DINÁMICO DE GRÁFICAS CON CONTRASTE DE PALETA (NAVY + DORADO + BEIGE)
+        // DIBUJO DINÁMICO DE GRÁFICAS CON CONTRASTE DE PALETA (NAVY + DORADO + BEIGE)
         function renderCharts() {
             const isDark = document.body.classList.contains('dark-theme');
             const textColor = isDark ? '#EAE7E1' : '#10254D';
@@ -1489,7 +1552,6 @@ ${JSON.stringify(descriptionsList)}`;
                 const labels = Object.keys(categoryTotals);
                 const dataValues = Object.values(categoryTotals);
 
-                // Paleta elegante con alto contraste tanto sobre fondo marino oscuro como sobre blanco
                 const palette = isDark
                     ? ['#CBB082', '#EAE7E1', '#6B8CC7', '#A38A5E', '#B8BCC4', '#4A6FA5', '#DFC9A6']
                     : ['#10254D', '#CBB082', '#2E4A7D', '#8E734A', '#6C7077', '#1B3B73', '#B89B6A'];
@@ -1532,6 +1594,220 @@ ${JSON.stringify(descriptionsList)}`;
                     }
                 });
             }
+        }
+
+        // === CHAT IA: CONSEJOS FINANCIEROS ===
+        function buildUserFinancialContext() {
+            let totalInc = 0, totalExp = 0;
+            const spentByCategory = {};
+
+            dailyTransactions.forEach(t => {
+                const amt = parseFloat(t.amount) || 0;
+                if (t.type === 'income') {
+                    totalInc += amt;
+                } else {
+                    totalExp += amt;
+                    const cat = t.category || 'Otros';
+                    spentByCategory[cat] = (spentByCategory[cat] || 0) + amt;
+                }
+            });
+
+            const allCats = customCategories.length > 0 ? customCategories : defaultCategories;
+            const limitsSummary = allCats.map(c => {
+                const limit = parseFloat(c.budget_limit || c.limit) || 0;
+                const spent = spentByCategory[c.name] || 0;
+                return `- ${c.name}: Gastado ${currentCurrency}${formatMoney(spent)} de un límite de ${currentCurrency}${formatMoney(limit)}`;
+            }).join('\n');
+
+            const goalsSummary = goalsList.length > 0
+                ? goalsList.map(g => `- ${g.name}: Meta ${currentCurrency}${formatMoney(g.target_amount)} a ${g.target_months} meses (Cuota: ${currentCurrency}${formatMoney(g.monthly_debit)}/mes)`).join('\n')
+                : 'Sin objetivos registrados.';
+
+            const recentTxs = dailyTransactions.slice(0, 20).map(t =>
+                `[${t.date}] ${t.type === 'income' ? 'INGRESO' : 'GASTO'} | ${t.category} | ${t.description || 'Sin detalle'}: ${currentCurrency}${formatMoney(t.amount)}`
+            ).join('\n');
+
+            const goalsDebit = goalsList.reduce((acc, g) => acc + (parseFloat(g.monthly_debit) || 0), 0);
+            const freeBalance = totalInc - totalExp - goalsDebit;
+
+            return `DATOS FINANCIEROS DEL USUARIO (Periodo: ${selectedPeriod}, Divisa: ${currentCurrency}):
+- Ingresos Totales: ${currentCurrency}${formatMoney(totalInc)}
+- Gastos Totales: ${currentCurrency}${formatMoney(totalExp)}
+- Cuota Mensual de Objetivos: ${currentCurrency}${formatMoney(goalsDebit)}
+- Saldo Libre Disponible: ${currentCurrency}${formatMoney(freeBalance)}
+- Fondo de Emergencia Actual: ${currentCurrency}${formatMoney(totalSavingsFund)}
+
+ESTADO DE PRESUPUESTOS POR CATEGORÍA:
+${limitsSummary}
+
+OBJETIVOS DE AHORRO:
+${goalsSummary}
+
+ÚLTIMOS MOVIMIENTOS REGISTRADOS:
+${recentTxs || 'No hay transacciones registradas en este periodo.'}`;
+        }
+
+        function generateLocalFinancialAdvice(question) {
+            let totalInc = 0, totalExp = 0;
+            const spentByCat = {};
+
+            dailyTransactions.forEach(t => {
+                const amt = parseFloat(t.amount) || 0;
+                if (t.type === 'income') totalInc += amt;
+                else {
+                    totalExp += amt;
+                    spentByCat[t.category || 'Otros'] = (spentByCat[t.category || 'Otros'] || 0) + amt;
+                }
+            });
+
+            const goalsDebit = goalsList.reduce((acc, g) => acc + (parseFloat(g.monthly_debit) || 0), 0);
+            const balance = totalInc - totalExp - goalsDebit;
+            const topCatEntry = Object.entries(spentByCat).sort((a, b) => b[1] - a[1])[0];
+            const q = question.toLowerCase();
+
+            if (dailyTransactions.length === 0) {
+                return `Para mantener una salud financiera estable en **MasterBudget Pro**, te recomiendo seguir estos 4 pilares:\n\n• **Regla 50/30/20:** Destina máximo 50% a necesidades básicas, 30% a gastos personales y al menos **20% al ahorro**.\n• **Fondo de Emergencia:** Construye un colchón equivalente a **3 a 6 meses** de tus gastos fijos en la pestaña *Fondo*.\n• **Control de Límites:** Configura topes mensuales por categoría para evitar gastos hormiga.\n• **Primer paso:** Registra tus ingresos y gastos del mes o importa tu estado de cuenta BI para darte un diagnóstico exacto con tus cifras.`;
+            }
+
+            if (q.includes('gasto') || q.includes('categoria') || q.includes('categoría') || q.includes('donde')) {
+                return topCatEntry
+                    ? `En el periodo **${selectedPeriod}**, tu mayor fuga de dinero está en **${topCatEntry[0]}** con un total de **${currentCurrency} ${formatMoney(topCatEntry[1])}** (representa el ${totalExp > 0 ? Math.round((topCatEntry[1] / totalExp) * 100) : 0}% de tus gastos totales).\n\n• **Recomendación:** Reduce un 15% los consumos no esenciales en esta categoría para liberar **${currentCurrency} ${formatMoney(topCatEntry[1] * 0.15)}** adicionales este mes.`
+                    : `Aún no tienes gastos registrados en **${selectedPeriod}**.`;
+            }
+
+            const savingsTarget = totalInc > 0 ? totalInc * 0.20 : 0;
+            const statusText = balance >= 0
+                ? `Tienes un saldo libre positivo de **${currentCurrency} ${formatMoney(balance)}**.`
+                : `⚠️ Estás en déficit por **-${currentCurrency} ${formatMoney(Math.abs(balance))}**.`;
+
+            return `**Diagnóstico de tu Salud Financiera (${selectedPeriod}):**\n\n• **Balance Actual:** Ingresos de **${currentCurrency} ${formatMoney(totalInc)}** frente a gastos de **${currentCurrency} ${formatMoney(totalExp)}**. ${statusText}\n• **Categoría Principal:** ${topCatEntry ? `**${topCatEntry[0]}** (${currentCurrency} ${formatMoney(topCatEntry[1])})` : 'Sin gastos aún'}.\n• **Meta de Ahorro Ideal (20%):** Deberías apartar **${currentCurrency} ${formatMoney(savingsTarget)}** este mes hacia tus objetivos o fondo de emergencia.\n• **Fondo de Emergencia:** Actualmente tienes **${currentCurrency} ${formatMoney(totalSavingsFund)}** (${totalExp > 0 ? (totalSavingsFund / totalExp).toFixed(1) : '0.0'} meses de cobertura).`;
+        }
+
+        function appendChatBubble(sender, text) {
+            const container = document.getElementById('ai-chat-messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `d-flex flex-column ${sender === 'user' ? 'align-items-end' : 'align-items-start'} mb-3`;
+
+            const safeHtml = text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            if (sender === 'user') {
+                wrapper.innerHTML = `<div class="p-3 rounded-4 shadow-sm ai-bubble-user" style="max-width: 80%;">${safeHtml}</div>`;
+            } else {
+                wrapper.innerHTML = `
+                    <div class="p-3 rounded-4 shadow-sm ai-bubble-bot" style="max-width: 82%;">
+                        <div class="small fw-bold mb-1" style="color: var(--gold-accent);"><i class="bi bi-robot me-1"></i> Asesor MasterBudget Pro</div>
+                        <div>${safeHtml}</div>
+                    </div>`;
+            }
+
+            container.appendChild(wrapper);
+            container.scrollTop = container.scrollHeight;
+            return wrapper;
+        }
+
+        function askQuickFinancialPrompt(promptText) {
+            document.getElementById('ai-chat-input').value = promptText;
+            document.getElementById('ai-chat-form').dispatchEvent(new Event('submit'));
+        }
+
+   async function getAvailableGeminiModels() {
+            const preferred = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.0-flash"];
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`);
+                if (!res.ok) return preferred;
+                const data = await res.json();
+                const apiModels = (data.models || [])
+                    .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                    .map(m => m.name.replace("models/", ""))
+                    .filter(name => name.includes("flash") && !name.includes("2.5") && !name.includes("2.0") && !name.includes("image") && !name.includes("audio") && !name.includes("tts"));
+
+                // Pone primero los modelos Gemini 3 estables y luego cualquier otro flash válido
+                const merged = [...new Set([...preferred, ...apiModels])];
+                return merged;
+            } catch {
+                return preferred;
+            }
+        }
+        async function sendFinancialChatMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('ai-chat-input');
+            const sendBtn = document.getElementById('ai-chat-send-btn');
+            const userMessage = input.value.trim();
+            if (!userMessage) return;
+
+            input.value = '';
+            input.disabled = true;
+            sendBtn.disabled = true;
+
+            appendChatBubble('user', userMessage);
+            const typingEl = appendChatBubble('bot', 'Analizando tus finanzas...');
+
+            const financialData = buildUserFinancialContext();
+
+            if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "") {
+                typingEl.remove();
+                appendChatBubble('bot', generateLocalFinancialAdvice(userMessage));
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.focus();
+                return;
+            }
+
+            const systemPrompt = `Eres el asesor financiero experto de "MasterBudget Pro".
+Responde en español, de forma clara, breve, práctica y directa usando los datos reales del usuario proporcionados abajo.
+Si el usuario aún no ha ingresado movimientos, indícale amablemente qué puede registrar o importar y dale consejos generales útiles.
+Usa listas con viñetas y negritas para destacar cifras clave. No inventes transacciones que no estén en los datos.
+
+${financialData}`;
+
+            aiChatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+            // Obtiene los modelos reales disponibles en tu clave API
+            const availableModels = await getAvailableGeminiModels();
+            let reply = null;
+
+            for (const model of availableModels)  {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            systemInstruction: { parts: [{ text: systemPrompt }] },
+                            contents: aiChatHistory
+                        })
+                    });
+
+                    clearTimeout(timeoutId);
+                    const data = await response.json();
+                    if (!response.ok) continue;
+
+                    reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (reply) break;
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                }
+            }
+
+            typingEl.remove();
+
+            if (reply) {
+                aiChatHistory.push({ role: "model", parts: [{ text: reply }] });
+                appendChatBubble('bot', reply);
+            } else {
+                aiChatHistory.pop();
+                appendChatBubble('bot', generateLocalFinancialAdvice(userMessage));
+            }
+
+            input.disabled = false;
+            sendBtn.disabled = false;
+            input.focus();
         }
     </script>
 </body>
